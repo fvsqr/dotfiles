@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIRECTORY=~/Downloads/1_week/to_delete
+
+for FILE in "$DIRECTORY"/*; do
+  echo -n "$FILE --- "
+  rm -rf "$FILE"
+  echo "removed"
+done
+

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+weekAgo=$(date -v-30d +%F)
+
+DIRECTORY=~/Downloads/1_week
+MOVETO_DIR="to_delete"
+
+for FILE in "$DIRECTORY"/*; do
+  if [[ "${FILE##*/}" == "$MOVETO_DIR" ]]; then
+    continue
+  fi
+
+  contentCreationDate=$(mdls -r -attr kMDItemContentCreationDate "$FILE")
+  addedDate=$(mdls -r -attr kMDItemDateAdded "$FILE")
+  contentModificationDate=$(mdls -r -attr kMDItemContentModificationDate "$FILE")
+  lastUsedDate=$(mdls -r -attr kMDItemLastUsedDate "$FILE")
+
+  echo
+  echo -n "$FILE --- "
+
+  if [[ $contentCreationDate < $weekAgo ]] 
+  then
+    echo -n "o"
+  else
+    echo -n "n"
+  fi  
+
+  if [[ $contentModificationDate < $weekAgo ]]
+  then
+    echo -n "o"
+  else
+    echo -n "n"
+  fi
+
+
+  if [[ $contentCreationDate < $weekAgo ]]
+  then
+    if [[ $contentModificationDate < $weekAgo ]]
+    then
+      echo -n "=> MOVE from [ ${FILE} ] to [ $DIRECTORY/$MOVETO_DIR/${FILE##*/} ]"
+      mv "${FILE}" "$DIRECTORY/$MOVETO_DIR/${FILE##*/}"
+    fi
+  fi
+done
+
