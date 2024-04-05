@@ -1,0 +1,10 @@
+#
+# Attention: Will eventually be overwritten by .dotfiles/ssh/config
+#
+
+Host github.com
+  User git
+  Hostname github.com
+  PreferredAuthentications publickey
+  PubkeyAcceptedAlgorithms ssh-ed25519
+  IdentityFile ~/.ssh/id_ed25519
