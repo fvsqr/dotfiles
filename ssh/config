@@ -4,7 +4,12 @@
 
 Host github.com
   User git
-  Hostname github.com
+  HostName github.com
   PreferredAuthentications publickey
   PubkeyAcceptedAlgorithms ssh-ed25519
   IdentityFile ~/.ssh/id_ed25519
+
+Host oraclecloud
+  User ubuntu
+  HostName 130.61.56.107
+  IdentityFile ~/.ssh/id_ecdsa
