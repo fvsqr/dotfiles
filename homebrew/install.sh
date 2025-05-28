@@ -24,4 +24,7 @@ then
 
 fi
 
+
+source "$(dirname "$0")/pin.sh"
+
 exit 0
