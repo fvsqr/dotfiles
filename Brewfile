@@ -15,6 +15,8 @@ brew 'htop'
 brew 'jq'
 brew 'mas'
 
+cask 'arc'
+cask 'claude'
 cask 'pdfsam-basic'
 cask 'miniconda'
 cask 'flowvision'

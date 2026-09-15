@@ -1,56 +1,192 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # dot
 #
-# `dot` handles installation, updates, things like that. Run it periodically
-# to make sure you're on the latest and greatest.
+# `dot` handles installation, updates and cleanup. Run it periodically to
+# keep the machine in line with the Brewfiles.
+#
+#   dot                 install everything (the default; bootstrap uses this)
+#   dot update          update Homebrew and every installed package
+#   dot list            show what is installed and whether a Brewfile lists it
+#   dot cleanup         show what no Brewfile lists (removes nothing)
+#   dot cleanup -f      actually remove it
+#
+# cleanup is a dry run unless -f/--force is given. That two-step is the only
+# safety net, so it is deliberate: look at the list first, then apply it.
 
 set -e
 
-parentDirectory="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P)"
-dotfilesDirectory="$(cd "$( dirname "$parentDirectory" )" && pwd -P)"
-
-displayUsageAndExit() {
-	echo "dot -- dotfiles management"
-	echo ""
-	echo "Usage: dot [options]"
-	echo ""
-	echo "Options:"
-	echo "  -e, --edit    Open dotfiles directory for editing"
-	echo "  -h, --help    Show this help message and exit"
-	exit
+# Follow symlinks, so that `dot` still finds the dotfiles when it is linked
+# into a directory on the PATH rather than called inside the repository.
+dot_root () {
+  local src target
+  src="${BASH_SOURCE[0]:-$0}"
+  while [ -L "$src" ]
+  do
+    target="$(readlink "$src")"
+    case "$target" in
+      /*) src="$target" ;;
+      *)  src="$(dirname "$src")/$target" ;;
+    esac
+  done
+  ( cd "$(dirname "$src")/.." && pwd -P )
 }
 
-while test $# -gt 0; do
-	case "$1" in
-		"-h"|"--help")
-			displayUsageAndExit
-			;;
-		"-e"|"--edit")
-			exec "$EDITOR" "$dotfilesDirectory"
-			exit
-			;;
-		*)
-			echo "Invalid option: $1"
-			displayUsageAndExit
-			;;
-	esac
-	shift
+ZSH="$(dot_root)"
+export ZSH
+
+displayUsageAndExit () {
+  echo "dot -- dotfiles management"
+  echo ""
+  echo "Usage: dot [command] [options]"
+  echo ""
+  echo "Commands:"
+  echo "  install       Install everything: macOS defaults, Homebrew, packages (default)"
+  echo "  update        Update Homebrew and all installed packages"
+  echo "  list          List installed packages and whether a Brewfile declares them"
+  echo "  cleanup       List packages no Brewfile declares; -f removes them"
+  echo ""
+  echo "Options:"
+  echo "  -f, --force   cleanup: actually remove, instead of only listing"
+  echo "  -e, --edit    Open dotfiles directory for editing"
+  echo "  -h, --help    Show this help message and exit"
+  exit
+}
+
+# brew bundle reads a single file, but packages are declared across Brewfile
+# and the optional per-machine Brewfile.local. Cleaning up against only the
+# first would treat every local package as unwanted, so merge them.
+merged_brewfile () {
+  local tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/Brewfile.merged.XXXXXX")"
+  cat "$ZSH/Brewfile" > "$tmp"
+  if [ -f "$ZSH/Brewfile.local" ]
+  then
+    printf '\n' >> "$tmp"
+    cat "$ZSH/Brewfile.local" >> "$tmp"
+  fi
+  printf '%s\n' "$tmp"
+}
+
+# Which Brewfile, if any, declares this package? Entries may carry a tap
+# prefix (homebrew/core/wget), so match on the last path segment.
+declared_in () {
+  local name="$1" file
+  for file in Brewfile Brewfile.local
+  do
+    if [ -f "$ZSH/$file" ] && grep -qE \
+      "^[[:space:]]*(brew|cask|mas)[[:space:]]+['\"]([^'\"]*/)?${name}['\"]" "$ZSH/$file"
+    then
+      printf '%s\n' "$file"
+      return 0
+    fi
+  done
+  printf -- '-\n'
+}
+
+report () {
+  local kind="$1" name source
+  while read -r name
+  do
+    [ -z "$name" ] && continue
+    source="$(declared_in "$name")"
+    if [ "$source" = "-" ]
+    then
+      printf '    %-30s %-8s not declared\n' "$name" "$kind"
+    else
+      printf '    %-30s %-8s %s\n' "$name" "$kind" "$source"
+    fi
+  done
+}
+
+cmd_list () {
+  echo ""
+  echo "  Installed on request"
+  echo ""
+  brew leaves --installed-on-request | report formula
+  brew list --cask -1 2>/dev/null | report cask
+  echo ""
+  echo "  Dependencies that nothing needs any more"
+  echo ""
+  brew autoremove --dry-run 2>&1 | sed 's/^/    /'
+  echo ""
+}
+
+cmd_cleanup () {
+  local force="$1" brewfile
+  brewfile="$(merged_brewfile)"
+
+  if [ "$force" = "yes" ]
+  then
+    echo "› brew bundle cleanup --force"
+    brew bundle cleanup --file="$brewfile" --force
+    echo "› brew autoremove"
+    brew autoremove
+    echo "› brew cleanup"
+    brew cleanup
+  else
+    echo ""
+    echo "  Dry run. Nothing is removed. Re-run with: dot cleanup --force"
+    echo ""
+    echo "› brew bundle cleanup"
+    brew bundle cleanup --file="$brewfile" | sed 's/^/    /'
+    echo "› brew autoremove --dry-run"
+    brew autoremove --dry-run 2>&1 | sed 's/^/    /'
+    echo "› brew cleanup --dry-run"
+    brew cleanup --dry-run 2>&1 | sed 's/^/    /'
+    echo ""
+  fi
+
+  rm -f "$brewfile"
+}
+
+cmd_update () {
+  echo "› brew update"
+  brew update
+  echo "› brew upgrade"
+  brew upgrade
+  echo "› script/install"
+  "$ZSH/script/install"
+}
+
+cmd_install () {
+  # Set macOS defaults
+  "$ZSH/macos/set-defaults.sh"
+
+  # Install homebrew
+  "$ZSH/homebrew/install.sh"
+
+  # Upgrade homebrew
+  . "$ZSH/homebrew/shellenv.sh"
+  echo "› brew update"
+  brew update
+
+  # Install software
+  echo "› script/install"
+  "$ZSH/script/install"
+}
+
+command=""
+force="no"
+
+while test $# -gt 0
+do
+  case "$1" in
+    "-h"|"--help")    displayUsageAndExit ;;
+    "-e"|"--edit")    exec "$EDITOR" "$ZSH" ;;
+    "-f"|"--force")   force="yes" ;;
+    install|update|list|cleanup) command="$1" ;;
+    *)
+      echo "Invalid option: $1"
+      displayUsageAndExit
+      ;;
+  esac
+  shift
 done
 
-export ZSH=$HOME/.dotfiles
-
-# Set macOS defaults
-$ZSH/macos/set-defaults.sh
-
-# Install homebrew
-$ZSH/homebrew/install.sh 2>&1
-
-# Upgrade homebrew
-. "$ZSH/homebrew/shellenv.sh"
-echo "› brew update"
-brew update
-
-# Install software
-echo "› script/install"
-$ZSH/script/install
+case "${command:-install}" in
+  install) cmd_install ;;
+  update)  . "$ZSH/homebrew/shellenv.sh"; cmd_update ;;
+  list)    . "$ZSH/homebrew/shellenv.sh"; cmd_list ;;
+  cleanup) . "$ZSH/homebrew/shellenv.sh"; cmd_cleanup "$force" ;;
+esac

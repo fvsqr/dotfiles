@@ -151,7 +151,7 @@ then
   # progress bar - those redraw one line with \r and never send a newline,
   # so a long install looked like a hang. It also hid the exit status
   # behind the loop's, which reported failures as success.
-  if source bin/dot
+  if source bin/dot install
   then
     success "dependencies installed"
   else

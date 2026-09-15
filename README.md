@@ -66,6 +66,24 @@ defaults, and so on. Tweak this script, and occasionally run `dot` from
 time to time to keep your environment fresh and up-to-date. You can find
 this script in `bin/`.
 
+```
+dot              install everything (the default; script/bootstrap uses this)
+dot update       update Homebrew and every installed package
+dot list         list installed packages and which Brewfile declares them
+dot cleanup      list packages no Brewfile declares - removes nothing
+dot cleanup -f   actually remove them, then prune dependencies and caches
+```
+
+`dot list` marks each package `Brewfile`, `Brewfile.local` or `not declared`.
+Anything in the last group is what `dot cleanup` would remove, so the two
+commands answer the same question from opposite ends.
+
+`cleanup` is a dry run unless `-f`/`--force` is given; that two-step is the
+only safety net, so it is deliberate. Under the hood it is `brew bundle
+cleanup`, but run against `Brewfile` and `Brewfile.local` merged into one
+temporary file - `brew bundle` reads a single file, and pointing it at
+`Brewfile` alone would treat every per-machine package as unwanted.
+
 ### Homebrew
 
 `homebrew/install.sh` picks the prefix the machine allows:
