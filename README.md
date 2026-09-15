@@ -66,6 +66,40 @@ defaults, and so on. Tweak this script, and occasionally run `dot` from
 time to time to keep your environment fresh and up-to-date. You can find
 this script in `bin/`.
 
+### Homebrew
+
+`homebrew/install.sh` picks the prefix the machine allows:
+
+| | admin | no admin |
+|---|---|---|
+| Apple Silicon | `/opt/homebrew`, official installer | `~/.homebrew` + `apps/` |
+| Intel | `/usr/local`, set up by hand | `~/.homebrew` + `apps/` |
+
+Without admin rights Homebrew is a plain git clone inside `$HOME` and casks
+land in `<prefix>/apps`, since `/Applications` is not writable either. The
+official installer refuses to run on Intel, so that case performs the same
+steps directly.
+
+Two environment variables change the outcome:
+
+* `HOMEBREW_NO_ADMIN=1` takes the unprivileged path even where admin rights
+  exist - useful for testing it on a machine that has them.
+* `HOMEBREW_USER_PREFIX` moves the unprivileged prefix. Bottles in a custom
+  prefix require it to be no longer in bytes than the platform default
+  (`/opt/homebrew` = 13), which `~/.homebrew` exceeds, so it builds from
+  source. Keep an override in `~/.localrc`.
+
+### Packages
+
+`Brewfile` is the shared set, installed on every machine. `Brewfile.local`
+next to it is optional, ignored by git, and installed afterwards - that is
+where per-machine additions go. Copy `Brewfile.local.example` to start.
+
+The split matters on Intel Macs: Homebrew has stopped building bottles for
+them, so any formula whose dependencies have moved past the last bottle is
+compiled locally. Keeping such packages out of the shared `Brewfile` keeps
+the slow machines fast.
+
 ## bugs
 
 I want this to work for everyone; that means when you clone it down it should

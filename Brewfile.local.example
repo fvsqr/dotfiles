@@ -1,0 +1,10 @@
+# Machine-specific packages. Copy to Brewfile.local (which git ignores)
+# and adjust per Mac.
+#
+# Put anything here that is not worth its cost on every machine. On Intel
+# Macs Homebrew no longer builds bottles, so a formula whose dependencies
+# have moved past the last bottle gets compiled locally - wget alone pulls
+# in the whole OpenSSL chain, which is a long build on older hardware.
+# macOS ships curl, so wget is a convenience, not a necessity.
+
+brew 'wget'

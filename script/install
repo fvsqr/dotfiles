@@ -4,10 +4,18 @@
 
 set -e
 
-cd "$(dirname $0)"/..
+cd "$(dirname "$0")"/..
+
+. ./homebrew/shellenv.sh
 
 echo "› brew bundle"
-~/.homebrew/bin/brew bundle
+brew bundle --file=Brewfile
+
+if [ -f Brewfile.local ]
+then
+  echo "› brew bundle --file=Brewfile.local"
+  brew bundle --file=Brewfile.local
+fi
 
 # find the installers and run them iteratively
 find . -name install.sh | while read installer ; do sh -c "${installer}" ; done

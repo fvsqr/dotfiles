@@ -1,1 +1,2 @@
-export PATH="$HOME/.homebrew/bin:$PATH"
+# Put Homebrew on the PATH, wherever it is installed on this machine.
+source "$ZSH/homebrew/shellenv.sh"

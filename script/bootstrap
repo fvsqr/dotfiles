@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
 # bootstrap installs things.
+#
+#set -x
 
 cd "$(dirname "$0")/.."
 DOTFILES_ROOT=$(pwd -P)
@@ -144,7 +146,12 @@ install_dotfiles
 if [ "$(uname -s)" == "Darwin" ]
 then
   info "installing dependencies"
-  if source bin/dot | while read -r data; do info "$data"; done
+  # Run bin/dot straight to the terminal. Piping it through `while read`
+  # prefixed each line nicely, but swallowed every download and cask
+  # progress bar - those redraw one line with \r and never send a newline,
+  # so a long install looked like a hang. It also hid the exit status
+  # behind the loop's, which reported failures as success.
+  if source bin/dot
   then
     success "dependencies installed"
   else
