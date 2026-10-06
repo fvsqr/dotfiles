@@ -13,3 +13,7 @@ Host oraclecloud
   User ubuntu
   HostName 130.61.56.107
   IdentityFile ~/.ssh/id_ecdsa
+
+Host syno
+  User janburkl
+  HostName 10.5.5.201

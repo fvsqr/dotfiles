@@ -15,7 +15,6 @@ brew 'htop'
 brew 'jq'
 brew 'mas'
 
-cask 'arc'
 cask 'claude'
 cask 'pdfsam-basic'
 cask 'miniconda'
@@ -24,5 +23,6 @@ cask 'postman'
 cask 'visual-studio-code'
 cask 'vlc'
 cask 'wave'
+cask 'zen'
 
 mas 'Bitwarden', id: 1352778147

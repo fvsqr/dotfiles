@@ -4,7 +4,7 @@
 # Only pins what is actually installed, so a trimmed Brewfile
 # does not abort the installer.
 
-for formula in colima ffmpeg fastfetch
+for formula in colima fastfetch
 do
   if brew list --formula --versions "$formula" >/dev/null 2>&1
   then
